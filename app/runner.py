@@ -1,18 +1,13 @@
 import asyncio
 import json
 import logging
+import urllib.request
+import uuid
 from pathlib import Path
 
 from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart
-from aiogram.types import (
-    BufferedInputFile,
-    FSInputFile,
-    InputProfilePhotoStatic,
-    KeyboardButton,
-    Message,
-    ReplyKeyboardMarkup,
-)
+from aiogram.types import FSInputFile, KeyboardButton, Message, ReplyKeyboardMarkup
 
 log = logging.getLogger("dogs.runner")
 DATA = Path("/app/data")
@@ -51,7 +46,38 @@ def menu() -> ReplyKeyboardMarkup:
     )
 
 
-async def _apply_brand(bot: Bot, info: dict) -> str | None:
+def _set_profile_photo(token: str, logo: str) -> str | None:
+    boundary = uuid.uuid4().hex
+    photo = Path(logo).read_bytes()
+    payload = json.dumps({"type": "static", "photo": "attach://logo"}).encode()
+    body = b"".join([
+        f"--{boundary}\r\n".encode(),
+        b'Content-Disposition: form-data; name="photo"\r\n\r\n',
+        payload,
+        b"\r\n",
+        f"--{boundary}\r\n".encode(),
+        b'Content-Disposition: form-data; name="logo"; filename="logo.jpg"\r\n',
+        b"Content-Type: image/jpeg\r\n\r\n",
+        photo,
+        b"\r\n",
+        f"--{boundary}--\r\n".encode(),
+    ])
+    req = urllib.request.Request(
+        f"https://api.telegram.org/bot{token}/setMyProfilePhoto",
+        data=body,
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode())
+        if not data.get("ok"):
+            return str(data.get("description") or data)
+        return None
+    except Exception as exc:
+        return str(exc)
+
+
+async def _apply_brand(bot: Bot, info: dict) -> None:
     try:
         await bot.set_my_name(info["name"])
         await bot.set_my_description(f"{info['name']} — Dogs Bet")
@@ -59,17 +85,11 @@ async def _apply_brand(bot: Bot, info: dict) -> str | None:
     except Exception as exc:
         log.warning("brand text failed: %s", exc)
     logo = info.get("logo")
-    if not logo or not Path(logo).exists():
-        return None
-    try:
-        data = Path(logo).read_bytes()
-        await bot.set_my_profile_photo(
-            photo=InputProfilePhotoStatic(photo=BufferedInputFile(data, filename="logo.jpg"))
-        )
-        return None
-    except Exception as exc:
-        log.warning("profile photo failed: %s", exc)
-        return str(exc)
+    if logo and Path(logo).exists():
+        err = await asyncio.to_thread(_set_profile_photo, info["token"], logo)
+        info["logo_error"] = err or ""
+        if err:
+            log.warning("profile photo failed: %s", err)
 
 
 async def start_bot(bot_id: str, info: dict) -> None:
