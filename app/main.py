@@ -5,11 +5,13 @@ import secrets
 import urllib.error
 import urllib.request
 
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
+
+from app.runner import LOGOS, load_bots, save_bots, start_all, start_bot
 
 app = FastAPI(title="Dogs Bet Owner Panel")
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "dogsbet-owner-secret-change-me"))
@@ -28,7 +30,7 @@ CASHIERS = {
         "name": "Default cashier",
     }
 }
-BOTS = {}
+BOTS = load_bots()
 SETTINGS = {
     "syp_rate": 13000,
     "min_deposit": 50,
@@ -73,6 +75,13 @@ def page(request: Request, name: str, active: str, **extra):
     }
     ctx.update(extra)
     return templates.TemplateResponse(name, ctx)
+
+
+@app.on_event("startup")
+async def startup():
+    BOTS.clear()
+    BOTS.update(load_bots())
+    await start_all(BOTS)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -155,12 +164,35 @@ async def create_bot(
     BOTS[bot_id] = {
         "id": bot_id,
         "name": name,
-        "token": token[:12] + "...",
+        "token": token.strip(),
         "cashier_user": cashier_user,
         "cashier_pass": cashier_pass,
         "created": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "status": "starting",
+        "logo": "",
     }
+    save_bots(BOTS)
+    await start_bot(bot_id, BOTS[bot_id])
+    save_bots(BOTS)
     return RedirectResponse("/bots", status_code=303)
+
+
+@app.post("/bots/{bot_id}/logo")
+async def upload_logo(request: Request, bot_id: str, logo: UploadFile = File(...)):
+    user = require_login(request)
+    if not user or role_of(user) != "owner":
+        return RedirectResponse("/")
+    info = BOTS.get(bot_id)
+    if not info:
+        return RedirectResponse("/bots")
+    data = await logo.read()
+    path = LOGOS / f"{bot_id}.jpg"
+    path.write_bytes(data)
+    info["logo"] = str(path)
+    save_bots(BOTS)
+    await start_bot(bot_id, info)
+    save_bots(BOTS)
+    return RedirectResponse("/bots?logo=1", status_code=303)
 
 
 @app.get("/prices", response_class=HTMLResponse)

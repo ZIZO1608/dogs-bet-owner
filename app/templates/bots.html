@@ -8,17 +8,25 @@
   </div>
   <a class="btn" href="/bots/new">بوت جديد</a>
 </div>
+{% if request.query_params.get('logo') %}<p class="ok">تم حفظ اللوجو وربطه بالبوت.</p>{% endif %}
+<p>البوت القديم saso_9090 لم يُحفظ توكنه. أنشئه من جديد بنفس التوكن حتى يرد على /start.</p>
 <div class="card">
   <table>
-    <tr><th>الاسم</th><th>الكاشير</th><th>تاريخ الإنشاء</th></tr>
+    <tr><th>الاسم</th><th>الحالة</th><th>الكاشير</th><th>اللوجو</th></tr>
     {% for b in bots %}
     <tr>
       <td>{{ b.name }}</td>
+      <td>{{ b.status or 'saved' }}</td>
       <td>{{ b.cashier_user }} / {{ b.cashier_pass }}</td>
-      <td>{{ b.created }}</td>
+      <td>
+        <form method="post" action="/bots/{{ b.id }}/logo" enctype="multipart/form-data">
+          <input type="file" name="logo" accept="image/*" required>
+          <button type="submit">رفع اللوجو</button>
+        </form>
+      </td>
     </tr>
     {% else %}
-    <tr><td colspan="3">لا توجد بوتات بعد.</td></tr>
+    <tr><td colspan="4">لا توجد بوتات بعد.</td></tr>
     {% endfor %}
   </table>
 </div>
