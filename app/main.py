@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.runner import LOGOS, bind, load_bots, save_bots, start_all, start_bot
+from app.runner import LOGOS, bind, load_bots, load_offers, save_bots, save_offers, start_all, start_bot
 
 app = FastAPI(title="Dogs Bet Owner Panel")
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "dogsbet-owner-secret-change-me"))
@@ -296,6 +296,67 @@ async def save_bot_settings(
     })
     save_bots(BOTS)
     return RedirectResponse(f"/bots/{bot_id}?saved=1", status_code=303)
+
+
+@app.get("/offers", response_class=HTMLResponse)
+async def offers_page(request: Request):
+    user = require_login(request)
+    if not user:
+        return RedirectResponse("/login")
+    return page(request, "offers.html", "offers", offers=load_offers())
+
+
+@app.post("/offers")
+async def create_offer(
+    request: Request,
+    title: str = Form(...),
+    code: str = Form(...),
+    kind: str = Form("percent"),
+    value: float = Form(...),
+    max_uses: int = Form(100),
+    note: str = Form(""),
+):
+    user = require_login(request)
+    if not user:
+        return RedirectResponse("/login")
+    offers = load_offers()
+    offers.insert(0, {
+        "id": secrets.token_hex(4),
+        "title": title.strip(),
+        "code": code.strip().upper(),
+        "kind": "fixed" if kind.strip().lower() == "fixed" else "percent",
+        "value": value,
+        "max_uses": max_uses,
+        "used": 0,
+        "note": note.strip(),
+        "active": True,
+        "created_by": user,
+        "created": datetime.now().strftime("%Y-%m-%d %H:%M"),
+    })
+    save_offers(offers)
+    return RedirectResponse("/offers?saved=1", status_code=303)
+
+
+@app.post("/offers/{offer_id}/toggle")
+async def toggle_offer(request: Request, offer_id: str):
+    user = require_login(request)
+    if not user:
+        return RedirectResponse("/login")
+    offers = load_offers()
+    for offer in offers:
+        if offer["id"] == offer_id:
+            offer["active"] = not offer.get("active", True)
+    save_offers(offers)
+    return RedirectResponse("/offers", status_code=303)
+
+
+@app.post("/offers/{offer_id}/delete")
+async def delete_offer(request: Request, offer_id: str):
+    user = require_login(request)
+    if not user:
+        return RedirectResponse("/login")
+    save_offers([o for o in load_offers() if o["id"] != offer_id])
+    return RedirectResponse("/offers", status_code=303)
 
 
 @app.get("/prices", response_class=HTMLResponse)

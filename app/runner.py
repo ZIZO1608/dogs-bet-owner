@@ -13,7 +13,7 @@ from aiogram.types import FSInputFile, KeyboardButton, Message, ReplyKeyboardMar
 log = logging.getLogger("dogs.runner")
 DATA = Path("/app/data")
 DATA.mkdir(parents=True, exist_ok=True)
-STORE = DATA / "bots.json"
+OFFERS = DATA / "offers.json"
 LOGOS = DATA / "logos"
 LOGOS.mkdir(parents=True, exist_ok=True)
 
@@ -48,8 +48,17 @@ def load_bots() -> dict:
         return {}
 
 
-def save_bots(bots: dict) -> None:
-    STORE.write_text(json.dumps(bots, ensure_ascii=False, indent=2))
+def load_offers() -> list:
+    if not OFFERS.exists():
+        return []
+    try:
+        return json.loads(OFFERS.read_text())
+    except json.JSONDecodeError:
+        return []
+
+
+def save_offers(offers: list) -> None:
+    OFFERS.write_text(json.dumps(offers, ensure_ascii=False, indent=2))
 
 
 def menu() -> ReplyKeyboardMarkup:
