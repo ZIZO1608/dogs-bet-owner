@@ -21,6 +21,7 @@ RATE_API_URL = os.getenv(
     "https://aumzkcizwfnvnncggfpq.supabase.co/functions/v1/exchange-rates",
 )
 RATE_API_KEY = os.getenv("SYRIAN_RATE_API_KEY", "")
+OWNERS = {"owner": os.getenv("OWNER_PASSWORD", "owner123")}
 CASHIERS = {
     "cashier": {
         "password": os.getenv("CASHIER_PASSWORD", "cashier123"),
@@ -87,6 +88,11 @@ async def home(request: Request):
         cashiers=list(CASHIERS.keys()),
         settings=SETTINGS,
     )
+
+
+@app.get("/health")
+async def health():
+    return {"ok": True}
 
 
 @app.get("/login", response_class=HTMLResponse)
