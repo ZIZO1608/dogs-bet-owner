@@ -50,6 +50,30 @@
   {% if bot.logo_error %}<p class="err">{{ bot.logo_error }}</p>{% endif %}
 </div>
 <div class="card" style="margin-top:14px">
+  <h3>طلبات الشحن من البوت</h3>
+  <table>
+    <tr><th>الوقت</th><th>اللاعب</th><th>المبلغ</th><th>العملية</th><th>الحالة</th><th></th></tr>
+    {% for d in bot.bot_deposits or [] %}
+    <tr>
+      <td>{{ d.time }}</td>
+      <td>{{ d.player }}</td>
+      <td>{{ d.amount }} USD</td>
+      <td>{{ d.tx_id }}</td>
+      <td>{{ d.status }}</td>
+      <td>
+        {% if d.status == 'pending' %}
+        <form method="post" action="/bots/{{ bot.id }}/deposits/{{ d.id }}/approve" style="display:inline">
+          <button type="submit">قبول</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6">لا توجد طلبات شحن من البوت.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+<div class="card" style="margin-top:14px">
   <h3>كل الإجراءات</h3>
   <table>
     <tr><th>الوقت</th><th>المستخدم</th><th>الإجراء</th></tr>

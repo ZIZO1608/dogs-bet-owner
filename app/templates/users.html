@@ -9,14 +9,17 @@
 </div>
 <div class="card">
   <table>
-    <tr><th>المستخدم</th><th>الرصيد</th><th>الحالة</th><th>اللغة</th></tr>
+    <tr><th>البوت</th><th>المستخدم</th><th>الرصيد</th><th>الحسابات</th><th>الحالة</th></tr>
     {% for u in users %}
     <tr>
+      <td>{{ u.bot }}</td>
       <td>{{ u.username }}</td>
       <td>{{ u.balance }}</td>
+      <td>{{ u.accounts }}</td>
       <td>{{ u.status }}</td>
-      <td>{{ u.lang }}</td>
     </tr>
+    {% else %}
+    <tr><td colspan="5">لا يوجد مستخدمين بعد. يظهرون هنا بعد /start في البوت.</td></tr>
     {% endfor %}
   </table>
 </div>

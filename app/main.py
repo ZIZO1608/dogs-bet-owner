@@ -18,6 +18,7 @@ from app.runner import (
     load_bots,
     load_deposits,
     load_offers,
+    notify,
     save_bots,
     save_deposits,
     save_offers,
@@ -315,6 +316,26 @@ async def save_bot_settings(
     return RedirectResponse(f"/bots/{bot_id}?saved=1", status_code=303)
 
 
+@app.post("/bots/{bot_id}/deposits/{deposit_id}/approve")
+async def approve_bot_deposit(request: Request, bot_id: str, deposit_id: str):
+    user = require_login(request)
+    if not user or role_of(user) != "owner":
+        return RedirectResponse("/")
+    info = BOTS.get(bot_id)
+    if not info:
+        return RedirectResponse("/bots")
+    for row in info.get("bot_deposits") or []:
+        if row.get("id") == deposit_id and row.get("status") == "pending":
+            row["status"] = "approved"
+            players = info.get("players") or {}
+            player = players.get(str(row.get("telegram_id")))
+            if player is not None:
+                player["balance"] = float(player.get("balance") or 0) + float(row.get("amount") or 0)
+            await notify(bot_id, int(row.get("telegram_id") or 0), f"تم قبول الشحن {row.get('amount')} USD")
+    save_bots(BOTS)
+    return RedirectResponse(f"/bots/{bot_id}", status_code=303)
+
+
 @app.get("/offers", response_class=HTMLResponse)
 async def offers_page(request: Request):
     user = require_login(request)
@@ -433,7 +454,15 @@ async def approve_deposit(request: Request, deposit_id: str):
     user = require_login(request)
     if not user or role_of(user) != "owner":
         return RedirectResponse("/")
-    _set_deposit_status(deposit_id, "approved")
+    rows = load_deposits()
+    for row in rows:
+        if row["id"] == deposit_id:
+            row["status"] = "approved"
+            telegram_id = row.get("telegram_id")
+            bot_id = row.get("bot_id")
+            if telegram_id and bot_id:
+                await notify(bot_id, int(telegram_id), f"تم قبول الشحن {row.get('amount')} {row.get('currency', 'USD')}")
+    save_deposits(rows)
     return RedirectResponse("/deposits", status_code=303)
 
 
@@ -547,8 +576,14 @@ async def users_page(request: Request):
     user = require_login(request)
     if not user or role_of(user) != "owner":
         return RedirectResponse("/")
-    users = [
-        {"id": 1, "username": "x_store_seb", "balance": 0, "status": "active", "lang": "ar"},
-        {"id": 2, "username": "Robert7Gree", "balance": 0, "status": "active", "lang": "en"},
-    ]
+    users = []
+    for bot in BOTS.values():
+        for player in (bot.get("players") or {}).values():
+            users.append({
+                "bot": bot.get("name"),
+                "username": player.get("username"),
+                "balance": player.get("balance", 0),
+                "accounts": len(player.get("accounts") or []),
+                "status": "active",
+            })
     return page(request, "users.html", "users", users=users)
