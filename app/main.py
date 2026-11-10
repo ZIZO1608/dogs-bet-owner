@@ -117,15 +117,21 @@ async def refresh_loop():
 
 @app.on_event("startup")
 async def startup():
-    BOTS.clear()
-    BOTS.update(load_bots())
-    bind(BOTS)
+    try:
+        BOTS.clear()
+        BOTS.update(load_bots())
+        bind(BOTS)
+    except Exception:
+        pass
     try:
         data = await asyncio.to_thread(fetch_market_rate)
         apply_rate(data, SETTINGS.get("rate_side") or "sell")
     except Exception:
         pass
-    await start_all(BOTS)
+    try:
+        await start_all(BOTS)
+    except Exception:
+        pass
     asyncio.create_task(refresh_loop())
 
 

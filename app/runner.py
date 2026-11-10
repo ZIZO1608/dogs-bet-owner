@@ -11,8 +11,14 @@ from aiogram.filters import CommandStart
 from aiogram.types import FSInputFile, KeyboardButton, Message, ReplyKeyboardMarkup
 
 log = logging.getLogger("dogs.runner")
-DATA = Path("/app/data")
-DATA.mkdir(parents=True, exist_ok=True)
+DATA = Path(os.getenv("DATA_DIR", "/app/data"))
+try:
+    DATA.mkdir(parents=True, exist_ok=True)
+except OSError:
+    DATA = Path("/tmp/dogs-panel")
+    DATA.mkdir(parents=True, exist_ok=True)
+STORE = DATA / "bots.json"
+OFFERS = DATA / "offers.json"
 DEPOSITS = DATA / "deposits.json"
 LOGOS = DATA / "logos"
 LOGOS.mkdir(parents=True, exist_ok=True)
