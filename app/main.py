@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.runner import LOGOS, load_bots, save_bots, start_all, start_bot
+from app.runner import LOGOS, bind, load_bots, save_bots, start_all, start_bot
 
 app = FastAPI(title="Dogs Bet Owner Panel")
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "dogsbet-owner-secret-change-me"))
@@ -31,6 +31,7 @@ CASHIERS = {
     }
 }
 BOTS = load_bots()
+bind(BOTS)
 SETTINGS = {
     "syp_rate": 13000,
     "min_deposit": 50,
@@ -150,6 +151,9 @@ async def create_bot(
     cashier_user: str = Form(""),
     cashier_pass: str = Form(""),
     generate: str = Form(""),
+    shamcash_secret1: str = Form(""),
+    shamcash_secret2: str = Form(""),
+    shamcash_secret3: str = Form(""),
 ):
     user = require_login(request)
     if not user or role_of(user) != "owner":
@@ -170,11 +174,21 @@ async def create_bot(
         "created": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "status": "starting",
         "logo": "",
+        "shamcash_secret1": shamcash_secret1.strip(),
+        "shamcash_secret2": shamcash_secret2.strip(),
+        "shamcash_secret3": shamcash_secret3.strip(),
+        "syp_rate": SETTINGS["syp_rate"],
+        "min_deposit": SETTINGS["min_deposit"],
+        "max_deposit": SETTINGS["max_deposit"],
+        "min_withdraw": SETTINGS["min_withdraw"],
+        "max_withdraw": SETTINGS["max_withdraw"],
+        "withdraw_fee": SETTINGS["withdraw_fee"],
+        "actions": [],
     }
     save_bots(BOTS)
     await start_bot(bot_id, BOTS[bot_id])
     save_bots(BOTS)
-    return RedirectResponse("/bots", status_code=303)
+    return RedirectResponse(f"/bots/{bot_id}", status_code=303)
 
 
 @app.post("/bots/{bot_id}/logo")
@@ -193,6 +207,62 @@ async def upload_logo(request: Request, bot_id: str, logo: UploadFile = File(...
     await start_bot(bot_id, info)
     save_bots(BOTS)
     return RedirectResponse("/bots?logo=1", status_code=303)
+
+
+@app.get("/bots/{bot_id}", response_class=HTMLResponse)
+async def bot_page(request: Request, bot_id: str):
+    user = require_login(request)
+    if not user or role_of(user) != "owner":
+        return RedirectResponse("/")
+    info = BOTS.get(bot_id)
+    if not info:
+        return RedirectResponse("/bots")
+    info.setdefault("actions", [])
+    info.setdefault("syp_rate", SETTINGS["syp_rate"])
+    info.setdefault("min_deposit", SETTINGS["min_deposit"])
+    info.setdefault("max_deposit", SETTINGS["max_deposit"])
+    info.setdefault("min_withdraw", SETTINGS["min_withdraw"])
+    info.setdefault("max_withdraw", SETTINGS["max_withdraw"])
+    info.setdefault("withdraw_fee", SETTINGS["withdraw_fee"])
+    info.setdefault("shamcash_secret1", "")
+    info.setdefault("shamcash_secret2", "")
+    info.setdefault("shamcash_secret3", "")
+    return page(request, "bot.html", "bots", bot=info)
+
+
+@app.post("/bots/{bot_id}/settings")
+async def save_bot_settings(
+    request: Request,
+    bot_id: str,
+    shamcash_secret1: str = Form(""),
+    shamcash_secret2: str = Form(""),
+    shamcash_secret3: str = Form(""),
+    syp_rate: float = Form(13000),
+    min_deposit: float = Form(50),
+    max_deposit: float = Form(133000),
+    min_withdraw: float = Form(700),
+    max_withdraw: float = Form(133000),
+    withdraw_fee: float = Form(15),
+):
+    user = require_login(request)
+    if not user or role_of(user) != "owner":
+        return RedirectResponse("/")
+    info = BOTS.get(bot_id)
+    if not info:
+        return RedirectResponse("/bots")
+    info.update({
+        "shamcash_secret1": shamcash_secret1.strip(),
+        "shamcash_secret2": shamcash_secret2.strip(),
+        "shamcash_secret3": shamcash_secret3.strip(),
+        "syp_rate": syp_rate,
+        "min_deposit": min_deposit,
+        "max_deposit": max_deposit,
+        "min_withdraw": min_withdraw,
+        "max_withdraw": max_withdraw,
+        "withdraw_fee": withdraw_fee,
+    })
+    save_bots(BOTS)
+    return RedirectResponse(f"/bots/{bot_id}?saved=1", status_code=303)
 
 
 @app.get("/prices", response_class=HTMLResponse)

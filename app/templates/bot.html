@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}{{ bot.name }}{% endblock %}
+{% block body %}
+<div class="top">
+  <div>
+    <p class="kicker">{{ bot.status or 'saved' }}</p>
+    <h1>{{ bot.name }}</h1>
+  </div>
+  <a class="btn ghost" href="/bots">رجوع</a>
+</div>
+{% if request.query_params.get('saved') %}<p class="ok">تم الحفظ.</p>{% endif %}
+<div class="grid">
+  <div class="card"><h3>الكاشير</h3><p>{{ bot.cashier_user }} / {{ bot.cashier_pass }}</p></div>
+  <div class="card"><h3>سعر الدولار</h3><div class="num">{{ bot.syp_rate }}</div></div>
+  <div class="card"><h3>الإجراءات</h3><div class="num">{{ bot.actions|length }}</div></div>
+</div>
+<form method="post" action="/bots/{{ bot.id }}/settings" style="margin-top:14px">
+  <div class="card">
+    <h3>ShamCash</h3>
+    <label>Secret 1</label>
+    <input name="shamcash_secret1" value="{{ bot.shamcash_secret1 }}">
+    <label>Secret 2</label>
+    <input name="shamcash_secret2" value="{{ bot.shamcash_secret2 }}">
+    <label>Secret 3</label>
+    <input name="shamcash_secret3" value="{{ bot.shamcash_secret3 }}">
+  </div>
+  <div class="card">
+    <h3>الأسعار</h3>
+    <label>سعر الدولار</label>
+    <input name="syp_rate" type="number" value="{{ bot.syp_rate }}">
+    <label>أدنى شحن</label>
+    <input name="min_deposit" type="number" value="{{ bot.min_deposit }}">
+    <label>أعلى شحن</label>
+    <input name="max_deposit" type="number" value="{{ bot.max_deposit }}">
+    <label>أدنى سحب</label>
+    <input name="min_withdraw" type="number" value="{{ bot.min_withdraw }}">
+    <label>أعلى سحب</label>
+    <input name="max_withdraw" type="number" value="{{ bot.max_withdraw }}">
+    <label>رسوم السحب %</label>
+    <input name="withdraw_fee" type="number" value="{{ bot.withdraw_fee }}">
+  </div>
+  <button type="submit">حفظ الإعدادات</button>
+</form>
+<div class="card" style="margin-top:14px">
+  <h3>اللوجو</h3>
+  <form method="post" action="/bots/{{ bot.id }}/logo" enctype="multipart/form-data">
+    <input type="file" name="logo" accept="image/*" required>
+    <button type="submit">رفع اللوجو</button>
+  </form>
+  {% if bot.logo_error %}<p class="err">{{ bot.logo_error }}</p>{% endif %}
+</div>
+<div class="card" style="margin-top:14px">
+  <h3>كل الإجراءات</h3>
+  <table>
+    <tr><th>الوقت</th><th>المستخدم</th><th>الإجراء</th></tr>
+    {% for a in bot.actions %}
+    <tr>
+      <td>{{ a.time }}</td>
+      <td>{{ a.user }}</td>
+      <td>{{ a.text }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="3">لا توجد إجراءات بعد.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

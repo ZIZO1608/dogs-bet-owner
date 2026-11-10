@@ -3,6 +3,7 @@ import json
 import logging
 import urllib.request
 import uuid
+from datetime import datetime
 from pathlib import Path
 
 from aiogram import Bot, Dispatcher
@@ -18,6 +19,24 @@ LOGOS.mkdir(parents=True, exist_ok=True)
 
 _tasks: dict[str, asyncio.Task] = {}
 _bots: dict[str, Bot] = {}
+_store: dict = {}
+
+
+def bind(bots: dict) -> None:
+    global _store
+    _store = bots
+
+
+def log_action(info: dict, user: str, text: str) -> None:
+    info.setdefault("actions", [])
+    info["actions"].insert(0, {
+        "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "user": user,
+        "text": text[:180],
+    })
+    info["actions"] = info["actions"][:100]
+    if _store:
+        save_bots(_store)
 
 
 def load_bots() -> dict:
@@ -106,6 +125,8 @@ async def start_bot(bot_id: str, info: dict) -> None:
 
     @dp.message(CommandStart())
     async def on_start(message: Message):
+        user = message.from_user.username or str(message.from_user.id)
+        log_action(info, user, "/start")
         text = f"مرحباً بك في {info['name']}\nDogs Bet"
         logo = info.get("logo")
         if logo and Path(logo).exists():
@@ -115,6 +136,8 @@ async def start_bot(bot_id: str, info: dict) -> None:
 
     @dp.message()
     async def on_any(message: Message):
+        user = message.from_user.username or str(message.from_user.id)
+        log_action(info, user, message.text or "رسالة")
         await message.answer("القائمة جاهزة.", reply_markup=menu())
 
     async def run():
