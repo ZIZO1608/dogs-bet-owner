@@ -1,34 +1,25 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8">
-  <title>البوتات</title>
-  <style>
-    body { font-family: system-ui; background: #0f0f1a; color: #fff; margin: 0; }
-    header { background: #1a1a2e; padding: 1rem 2rem; }
-    a { color: #a78bfa; }
-    .container { padding: 2rem; }
-    table { width: 100%; border-collapse: collapse; background: #1a1a2e; }
-    th, td { padding: 0.75rem; text-align: right; border-bottom: 1px solid #333; }
-    .btn { background: #7c3aed; color: #fff; padding: 0.5rem 1rem; border-radius: 8px; text-decoration: none; }
-  </style>
-</head>
-<body>
-  <header><a href="/">الرئيسية</a></header>
-  <div class="container">
-    <h2>البوتات <a href="/bots/new" class="btn">+ بوت جديد</a></h2>
-    <table>
-      <tr><th>الاسم</th><th>الكاشير</th><th>تاريخ الإنشاء</th></tr>
-      {% for b in bots %}
-      <tr>
-        <td>{{ b.name }}</td>
-        <td>{{ b.cashier_user }} / {{ b.cashier_pass }}</td>
-        <td>{{ b.created }}</td>
-      </tr>
-      {% else %}
-      <tr><td colspan="3">مفيش بوتات لسه</td></tr>
-      {% endfor %}
-    </table>
+{% extends "base.html" %}
+{% block title %}البوتات{% endblock %}
+{% block body %}
+<div class="top">
+  <div>
+    <p class="kicker">Bots</p>
+    <h1>البوتات</h1>
   </div>
-</body>
-</html>
+  <a class="btn" href="/bots/new">بوت جديد</a>
+</div>
+<div class="card">
+  <table>
+    <tr><th>الاسم</th><th>الكاشير</th><th>تاريخ الإنشاء</th></tr>
+    {% for b in bots %}
+    <tr>
+      <td>{{ b.name }}</td>
+      <td>{{ b.cashier_user }} / {{ b.cashier_pass }}</td>
+      <td>{{ b.created }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="3">لا توجد بوتات بعد.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

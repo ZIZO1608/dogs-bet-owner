@@ -1,18 +1,25 @@
-from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
-from starlette.middleware.sessions import SessionMiddleware
+from datetime import datetime
 import os
 import secrets
-from datetime import datetime
+
+from fastapi import FastAPI, Form, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware
 
 app = FastAPI(title="Dogs Bet Owner Panel")
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "dogsbet-owner-secret-change-me"))
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
-# Owner: everything. Cashier: prices and dollar rate only.
 OWNERS = {"owner": os.getenv("OWNER_PASSWORD", "owner123")}
-CASHIERS = {}
+CASHIERS = {
+    "cashier": {
+        "password": os.getenv("CASHIER_PASSWORD", "cashier123"),
+        "name": "Default cashier",
+    }
+}
 BOTS = {}
 SETTINGS = {
     "syp_rate": 13000,
@@ -26,20 +33,12 @@ SETTINGS = {
     "shamcash_secret3": "",
 }
 
-# Default cashier so the panel can be tested before the owner creates one.
-CASHIERS["cashier"] = {
-    "password": os.getenv("CASHIER_PASSWORD", "cashier123"),
-    "name": "Default cashier",
-}
-
 
 def get_user(request: Request):
     return request.session.get("user")
 
 
 def role_of(user: str | None) -> str | None:
-    if not user:
-        return None
     if user in OWNERS:
         return "owner"
     if user in CASHIERS:
@@ -54,21 +53,33 @@ def require_login(request: Request):
     return user
 
 
+def page(request: Request, name: str, active: str, **extra):
+    user = get_user(request)
+    role = role_of(user)
+    ctx = {
+        "request": request,
+        "user": user,
+        "role": role,
+        "is_owner": role == "owner",
+        "active": active,
+    }
+    ctx.update(extra)
+    return templates.TemplateResponse(name, ctx)
+
+
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     user = require_login(request)
     if not user:
         return RedirectResponse("/login")
-    role = role_of(user)
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
-        "user": user,
-        "role": role,
-        "is_owner": role == "owner",
-        "bots": list(BOTS.values()),
-        "cashiers": list(CASHIERS.keys()),
-        "settings": SETTINGS,
-    })
+    return page(
+        request,
+        "dashboard.html",
+        "home",
+        bots=list(BOTS.values()),
+        cashiers=list(CASHIERS.keys()),
+        settings=SETTINGS,
+    )
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -98,7 +109,7 @@ async def bots_page(request: Request):
     user = require_login(request)
     if not user or role_of(user) != "owner":
         return RedirectResponse("/")
-    return templates.TemplateResponse("bots.html", {"request": request, "bots": list(BOTS.values())})
+    return page(request, "bots.html", "bots", bots=list(BOTS.values()))
 
 
 @app.get("/bots/new", response_class=HTMLResponse)
@@ -106,7 +117,7 @@ async def new_bot_page(request: Request):
     user = require_login(request)
     if not user or role_of(user) != "owner":
         return RedirectResponse("/")
-    return templates.TemplateResponse("new_bot.html", {"request": request})
+    return page(request, "new_bot.html", "bots")
 
 
 @app.post("/bots/new")
@@ -126,10 +137,7 @@ async def create_bot(
         cashier_user = f"cashier_{bot_id[:4]}"
         cashier_pass = secrets.token_urlsafe(8)
     if cashier_user in OWNERS:
-        return templates.TemplateResponse("new_bot.html", {
-            "request": request,
-            "error": "هذا الاسم محجوز للمالك",
-        })
+        return page(request, "new_bot.html", "bots", error="هذا الاسم محجوز للمالك")
     CASHIERS[cashier_user] = {"password": cashier_pass, "name": name}
     BOTS[bot_id] = {
         "id": bot_id,
@@ -147,11 +155,7 @@ async def prices_page(request: Request):
     user = require_login(request)
     if not user:
         return RedirectResponse("/login")
-    return templates.TemplateResponse("prices.html", {
-        "request": request,
-        "role": role_of(user),
-        "settings": SETTINGS,
-    })
+    return page(request, "prices.html", "prices", settings=SETTINGS)
 
 
 @app.post("/prices")
@@ -183,10 +187,7 @@ async def settings_page(request: Request):
     user = require_login(request)
     if not user or role_of(user) != "owner":
         return RedirectResponse("/")
-    return templates.TemplateResponse("settings.html", {
-        "request": request,
-        "settings": SETTINGS,
-    })
+    return page(request, "settings.html", "settings", settings=SETTINGS)
 
 
 @app.post("/settings")
@@ -216,7 +217,4 @@ async def users_page(request: Request):
         {"id": 1, "username": "x_store_seb", "balance": 0, "status": "active", "lang": "ar"},
         {"id": 2, "username": "Robert7Gree", "balance": 0, "status": "active", "lang": "en"},
     ]
-    return templates.TemplateResponse("users.html", {
-        "request": request,
-        "users": users,
-    })
+    return page(request, "users.html", "users", users=users)

@@ -2,23 +2,23 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>Dogs Bet Owner</title>
-  <style>
-    body { font-family: system-ui; background: #0f0f1a; color: #fff; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-    .card { background: #1a1a2e; padding: 2rem; border-radius: 12px; width: 320px; }
-    input, button { width: 100%; padding: 0.75rem; margin: 0.5rem 0; border-radius: 8px; border: none; }
-    button { background: #7c3aed; color: #fff; cursor: pointer; }
-    .error { color: #f87171; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>دخول Dogs Bet</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/panel.css">
 </head>
 <body>
-  <div class="card">
-    <h2>🐶 Dogs Bet Owner</h2>
-    {% if error %}<p class="error">{{ error }}</p>{% endif %}
-    <form method="post">
-      <input name="username" placeholder="Username" required>
-      <input name="password" type="password" placeholder="Password" required>
-      <button type="submit">Login</button>
+  <div class="login-wrap">
+    <form class="login" method="post">
+      <p class="kicker">DOGS BET</p>
+      <h1>لوحة التحكم</h1>
+      <p>دخول المالك أو الكاشير</p>
+      {% if error %}<p class="err">{{ error }}</p>{% endif %}
+      <label>اسم المستخدم</label>
+      <input name="username" autocomplete="username" required>
+      <label>كلمة المرور</label>
+      <input name="password" type="password" autocomplete="current-password" required>
+      <button type="submit">دخول</button>
     </form>
   </div>
 </body>

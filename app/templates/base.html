@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Dogs Bet{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/panel.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="side">
+      <div class="brand">
+        <div class="mark">D</div>
+        <div>
+          <b>Dogs Bet</b>
+          <span>Owner control</span>
+        </div>
+      </div>
+      <nav class="nav">
+        <a href="/" class="{{ 'active' if active == 'home' else '' }}">الرئيسية</a>
+        <a href="/prices" class="{{ 'active' if active == 'prices' else '' }}">الأسعار</a>
+        {% if is_owner %}
+        <a href="/bots" class="{{ 'active' if active == 'bots' else '' }}">البوتات</a>
+        <a href="/users" class="{{ 'active' if active == 'users' else '' }}">المستخدمين</a>
+        <a href="/settings" class="{{ 'active' if active == 'settings' else '' }}">ShamCash</a>
+        {% endif %}
+      </nav>
+      <a class="logout" href="/logout">تسجيل الخروج</a>
+    </aside>
+    <section class="main">
+      {% block body %}{% endblock %}
+    </section>
+  </div>
+</body>
+</html>
