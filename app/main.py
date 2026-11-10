@@ -6,6 +6,8 @@ import secrets
 import urllib.error
 import urllib.request
 
+from pathlib import Path
+
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -28,7 +30,9 @@ from app.runner import (
 
 app = FastAPI(title="Dogs Bet Owner Panel")
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "dogsbet-owner-secret-change-me"))
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
 RATE_API_URL = os.getenv(
@@ -118,22 +122,31 @@ async def refresh_loop():
 
 @app.on_event("startup")
 async def startup():
-    try:
-        BOTS.clear()
-        BOTS.update(load_bots())
-        bind(BOTS)
-    except Exception:
-        pass
-    try:
-        data = await asyncio.to_thread(fetch_market_rate)
-        apply_rate(data, SETTINGS.get("rate_side") or "sell")
-    except Exception:
-        pass
-    try:
-        await start_all(BOTS)
-    except Exception:
-        pass
-    asyncio.create_task(refresh_loop())
+    async def boot():
+        try:
+            BOTS.clear()
+            BOTS.update(load_bots())
+            bind(BOTS)
+        except Exception:
+            pass
+        try:
+            data = await asyncio.to_thread(fetch_market_rate)
+            apply_rate(data, SETTINGS.get("rate_side") or "sell")
+        except Exception:
+            pass
+        try:
+            await start_all(BOTS)
+        except Exception:
+            pass
+        while True:
+            try:
+                data = await asyncio.to_thread(fetch_market_rate)
+                apply_rate(data, SETTINGS.get("rate_side") or "sell")
+            except Exception:
+                pass
+            await asyncio.sleep(300)
+
+    asyncio.create_task(boot())
 
 
 @app.get("/", response_class=HTMLResponse)
