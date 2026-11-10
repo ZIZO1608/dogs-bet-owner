@@ -12,7 +12,18 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.runner import LOGOS, bind, load_bots, load_offers, save_bots, save_offers, start_all, start_bot
+from app.runner import (
+    LOGOS,
+    bind,
+    load_bots,
+    load_deposits,
+    load_offers,
+    save_bots,
+    save_deposits,
+    save_offers,
+    start_all,
+    start_bot,
+)
 
 app = FastAPI(title="Dogs Bet Owner Panel")
 app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "dogsbet-owner-secret-change-me"))
@@ -357,6 +368,76 @@ async def delete_offer(request: Request, offer_id: str):
         return RedirectResponse("/login")
     save_offers([o for o in load_offers() if o["id"] != offer_id])
     return RedirectResponse("/offers", status_code=303)
+
+
+@app.get("/deposits", response_class=HTMLResponse)
+async def deposits_page(request: Request):
+    user = require_login(request)
+    if not user:
+        return RedirectResponse("/login")
+    rows = load_deposits()
+    if role_of(user) != "owner":
+        rows = [d for d in rows if d.get("cashier") == user]
+    return page(request, "deposits.html", "deposits", deposits=rows)
+
+
+@app.post("/deposits")
+async def add_deposit(
+    request: Request,
+    player: str = Form(...),
+    amount: float = Form(...),
+    currency: str = Form("USD"),
+    tx_id: str = Form(...),
+    method: str = Form("ShamCash"),
+    note: str = Form(""),
+):
+    user = require_login(request)
+    if not user:
+        return RedirectResponse("/login")
+    rows = load_deposits()
+    tx = tx_id.strip()
+    if any(d.get("tx_id") == tx for d in rows):
+        return RedirectResponse("/deposits?dup=1", status_code=303)
+    rows.insert(0, {
+        "id": secrets.token_hex(4),
+        "player": player.strip(),
+        "amount": amount,
+        "currency": currency.strip().upper() or "USD",
+        "tx_id": tx,
+        "method": method.strip() or "ShamCash",
+        "note": note.strip(),
+        "cashier": user,
+        "status": "pending",
+        "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
+    })
+    save_deposits(rows)
+    return RedirectResponse("/deposits?saved=1", status_code=303)
+
+
+def _set_deposit_status(deposit_id: str, status: str):
+    rows = load_deposits()
+    for row in rows:
+        if row["id"] == deposit_id:
+            row["status"] = status
+    save_deposits(rows)
+
+
+@app.post("/deposits/{deposit_id}/approve")
+async def approve_deposit(request: Request, deposit_id: str):
+    user = require_login(request)
+    if not user or role_of(user) != "owner":
+        return RedirectResponse("/")
+    _set_deposit_status(deposit_id, "approved")
+    return RedirectResponse("/deposits", status_code=303)
+
+
+@app.post("/deposits/{deposit_id}/reject")
+async def reject_deposit(request: Request, deposit_id: str):
+    user = require_login(request)
+    if not user or role_of(user) != "owner":
+        return RedirectResponse("/")
+    _set_deposit_status(deposit_id, "rejected")
+    return RedirectResponse("/deposits", status_code=303)
 
 
 @app.get("/prices", response_class=HTMLResponse)
