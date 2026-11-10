@@ -180,7 +180,14 @@ def fetch_market_rate() -> dict:
         raise RuntimeError(f"API {exc.code}: {body[:180]}") from exc
     if not data.get("success"):
         raise RuntimeError(data.get("error") or "لم يرجع API سعراً")
-    return data
+    usd = (data.get("data") or {}).get("USD") or data
+    if "buy" not in usd or "sell" not in usd:
+        raise RuntimeError("الرد لا يحتوي سعر الدولار")
+    return {
+        "buy": usd["buy"],
+        "sell": usd["sell"],
+        "timestamp": data.get("last_updated") or data.get("timestamp") or "",
+    }
 
 
 @app.post("/prices/refresh")
