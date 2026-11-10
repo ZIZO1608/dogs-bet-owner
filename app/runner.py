@@ -48,6 +48,10 @@ def load_bots() -> dict:
         return {}
 
 
+def save_bots(bots: dict) -> None:
+    STORE.write_text(json.dumps(bots, ensure_ascii=False, indent=2))
+
+
 def load_offers() -> list:
     if not OFFERS.exists():
         return []
