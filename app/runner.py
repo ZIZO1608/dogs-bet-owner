@@ -127,7 +127,7 @@ async def start_bot(bot_id: str, info: dict) -> None:
     async def on_start(message: Message):
         user = message.from_user.username or str(message.from_user.id)
         log_action(info, user, "/start")
-        text = f"مرحباً بك في {info['name']}\nDogs Bet"
+        text = f"مرحباً بك في {info['name']}\nDogs Bet\nسعر الدولار: {info.get('syp_rate', '—')} ل.س"
         logo = info.get("logo")
         if logo and Path(logo).exists():
             await message.answer_photo(FSInputFile(logo), caption=text, reply_markup=menu())

@@ -1,4 +1,5 @@
 from datetime import datetime
+import asyncio
 import json
 import os
 import secrets
@@ -78,11 +79,43 @@ def page(request: Request, name: str, active: str, **extra):
     return templates.TemplateResponse(name, ctx)
 
 
+def apply_rate(data: dict, side: str = "sell") -> float:
+    value = float(data["buy"] if side == "buy" else data["sell"])
+    SETTINGS["syp_rate"] = value
+    SETTINGS["rate_buy"] = float(data["buy"])
+    SETTINGS["rate_sell"] = float(data["sell"])
+    SETTINGS["rate_side"] = side
+    SETTINGS["rate_updated"] = data.get("timestamp") or ""
+    for info in BOTS.values():
+        info["syp_rate"] = value
+        info["rate_buy"] = SETTINGS["rate_buy"]
+        info["rate_sell"] = SETTINGS["rate_sell"]
+    save_bots(BOTS)
+    return value
+
+
+async def refresh_loop():
+    while True:
+        try:
+            data = await asyncio.to_thread(fetch_market_rate)
+            apply_rate(data, SETTINGS.get("rate_side") or "sell")
+        except Exception:
+            pass
+        await asyncio.sleep(300)
+
+
 @app.on_event("startup")
 async def startup():
     BOTS.clear()
     BOTS.update(load_bots())
+    bind(BOTS)
+    try:
+        data = await asyncio.to_thread(fetch_market_rate)
+        apply_rate(data, SETTINGS.get("rate_side") or "sell")
+    except Exception:
+        pass
     await start_all(BOTS)
+    asyncio.create_task(refresh_loop())
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -305,12 +338,9 @@ async def refresh_prices(request: Request, side: str = Form("sell")):
         return RedirectResponse("/login")
     try:
         data = fetch_market_rate()
-        value = float(data["buy"] if side == "buy" else data["sell"])
+        value = apply_rate(data, side)
     except Exception as exc:
         return page(request, "prices.html", "prices", settings=SETTINGS, rate_error=str(exc))
-    SETTINGS["syp_rate"] = value
-    SETTINGS["rate_side"] = side
-    SETTINGS["rate_updated"] = data.get("timestamp") or ""
     return RedirectResponse("/prices?saved=1", status_code=303)
 
 

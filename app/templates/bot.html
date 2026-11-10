@@ -11,7 +11,7 @@
 {% if request.query_params.get('saved') %}<p class="ok">تم الحفظ.</p>{% endif %}
 <div class="grid">
   <div class="card"><h3>الكاشير</h3><p>{{ bot.cashier_user }} / {{ bot.cashier_pass }}</p></div>
-  <div class="card"><h3>سعر الدولار</h3><div class="num">{{ bot.syp_rate }}</div></div>
+  <div class="card"><h3>سعر الدولار من API</h3><div class="num">{{ bot.syp_rate }}</div><p>بيع {{ bot.rate_sell or bot.syp_rate }}</p></div>
   <div class="card"><h3>الإجراءات</h3><div class="num">{{ bot.actions|length }}</div></div>
 </div>
 <form method="post" action="/bots/{{ bot.id }}/settings" style="margin-top:14px">

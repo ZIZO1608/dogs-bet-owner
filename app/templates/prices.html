@@ -12,10 +12,12 @@
 <form method="post" action="/prices/refresh" style="margin-bottom:14px">
   <div class="card">
     <h3>سعر السوق السوري</h3>
-    <p>يسحب الدولار من Syrian Currency API. البيع هو السعر الافتراضي.</p>
+    <p>كل البوتات تستخدم هذا السعر. يتحدث تلقائياً كل 5 دقائق.</p>
+    <p>بيع: <b>{{ settings.rate_sell or settings.syp_rate }}</b> · شراء: <b>{{ settings.rate_buy or '—' }}</b></p>
+    <p>آخر تحديث: {{ settings.rate_updated or 'لم يتم بعد' }}</p>
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px">
-      <button type="submit" name="side" value="sell">استخدم سعر البيع</button>
-      <button class="ghost" type="submit" name="side" value="buy">استخدم سعر الشراء</button>
+      <button type="submit" name="side" value="sell">استخدم سعر البيع لكل البوتات</button>
+      <button class="ghost" type="submit" name="side" value="buy">استخدم سعر الشراء لكل البوتات</button>
     </div>
   </div>
 </form>

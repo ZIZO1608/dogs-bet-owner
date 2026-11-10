@@ -12,7 +12,12 @@
 <div class="grid">
   <div class="card"><h3>البوتات</h3><div class="num">{{ bots|length }}</div></div>
   <div class="card"><h3>الكاشير</h3><div class="num">{{ cashiers|length }}</div></div>
-  <div class="card"><h3>سعر الدولار</h3><div class="num">{{ settings.syp_rate }}</div><p>ليرة لكل 1 USD</p></div>
+  <div class="card">
+    <h3>سعر الدولار</h3>
+    <div class="num">{{ settings.syp_rate }}</div>
+    <p>بيع {{ settings.rate_sell or settings.syp_rate }} · شراء {{ settings.rate_buy or '—' }}</p>
+    <p>من Syrian Currency API{% if settings.rate_updated %} · {{ settings.rate_updated }}{% endif %}</p>
+  </div>
 </div>
 <div class="card" style="margin-top:14px">
   <h3>صلاحيات المالك</h3>
