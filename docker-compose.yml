@@ -2,8 +2,8 @@ services:
   panel:
     build: .
     restart: unless-stopped
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     environment:
       SECRET_KEY: ${SECRET_KEY:-change-me}
       OWNER_PASSWORD: ${OWNER_PASSWORD:-owner123}
