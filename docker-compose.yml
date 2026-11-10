@@ -6,3 +6,5 @@ services:
       - "8000:8000"
     environment:
       SECRET_KEY: ${SECRET_KEY:-change-me}
+      OWNER_PASSWORD: ${OWNER_PASSWORD:-owner123}
+      CASHIER_PASSWORD: ${CASHIER_PASSWORD:-cashier123}
