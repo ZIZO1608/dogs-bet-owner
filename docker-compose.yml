@@ -8,3 +8,5 @@ services:
       SECRET_KEY: ${SECRET_KEY:-change-me}
       OWNER_PASSWORD: ${OWNER_PASSWORD:-owner123}
       CASHIER_PASSWORD: ${CASHIER_PASSWORD:-cashier123}
+      SYRIAN_RATE_API_URL: ${SYRIAN_RATE_API_URL:-https://aumzkcizwfnvnncggfpq.supabase.co/functions/v1/exchange-rates}
+      SYRIAN_RATE_API_KEY: ${SYRIAN_RATE_API_KEY:-}

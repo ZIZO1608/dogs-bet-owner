@@ -1,6 +1,9 @@
 from datetime import datetime
+import json
 import os
 import secrets
+import urllib.error
+import urllib.request
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -13,7 +16,11 @@ app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "dogsbe
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
-OWNERS = {"owner": os.getenv("OWNER_PASSWORD", "owner123")}
+RATE_API_URL = os.getenv(
+    "SYRIAN_RATE_API_URL",
+    "https://aumzkcizwfnvnncggfpq.supabase.co/functions/v1/exchange-rates",
+)
+RATE_API_KEY = os.getenv("SYRIAN_RATE_API_KEY", "")
 CASHIERS = {
     "cashier": {
         "password": os.getenv("CASHIER_PASSWORD", "cashier123"),
@@ -156,6 +163,40 @@ async def prices_page(request: Request):
     if not user:
         return RedirectResponse("/login")
     return page(request, "prices.html", "prices", settings=SETTINGS)
+
+
+def fetch_market_rate() -> dict:
+    if not RATE_API_KEY:
+        raise RuntimeError("ضع SYRIAN_RATE_API_KEY في إعدادات Coolify")
+    req = urllib.request.Request(
+        RATE_API_URL,
+        headers={"x-api-key": RATE_API_KEY, "Accept": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            data = json.loads(resp.read().decode())
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", "replace")
+        raise RuntimeError(f"API {exc.code}: {body[:180]}") from exc
+    if not data.get("success"):
+        raise RuntimeError(data.get("error") or "لم يرجع API سعراً")
+    return data
+
+
+@app.post("/prices/refresh")
+async def refresh_prices(request: Request, side: str = Form("sell")):
+    user = require_login(request)
+    if not user:
+        return RedirectResponse("/login")
+    try:
+        data = fetch_market_rate()
+        value = float(data["buy"] if side == "buy" else data["sell"])
+    except Exception as exc:
+        return page(request, "prices.html", "prices", settings=SETTINGS, rate_error=str(exc))
+    SETTINGS["syp_rate"] = value
+    SETTINGS["rate_side"] = side
+    SETTINGS["rate_updated"] = data.get("timestamp") or ""
+    return RedirectResponse("/prices?saved=1", status_code=303)
 
 
 @app.post("/prices")

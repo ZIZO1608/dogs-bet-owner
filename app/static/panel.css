@@ -91,7 +91,7 @@ h1 { margin: 0; font-size: 28px; font-weight: 650; }
   border: 0; border-radius: 12px;
   padding: 12px 16px; font-weight: 700; cursor: pointer;
 }
-.btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+.btn.ghost, button.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
 
 form .card { margin-bottom: 14px; }
 label { display: block; margin: 12px 0 6px; color: var(--muted); font-size: 13px; }
